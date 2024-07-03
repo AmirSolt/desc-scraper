@@ -1,0 +1,17 @@
+version: "2"
+sql:
+    - engine: postgresql
+      queries: models/sql/query.sql
+      schema: models/sql/schema.sql
+      gen:
+        go:
+            emit_json_tags: true
+            package: models
+            out: models/
+            sql_package: pgx/v5
+            output_batch_file_name: batch_sqlc.go
+            output_db_file_name: db_sqlc.go
+            output_models_file_name: models_sqlc.go
+            output_querier_file_name: querier_sqlc.go
+            output_copyfrom_file_name: copyfrom_sqlc.go
+        
