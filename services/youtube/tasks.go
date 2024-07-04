@@ -10,10 +10,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -125,7 +125,7 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 	}
 
 	println(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
-	date, err := time.Parse("2 Jan 2006", videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
+	date, err := dateparse.ParseAny(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +149,6 @@ func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	os.WriteFile("raw.json", []byte(jsonStr), os.ModePerm)
 
 	var result map[string]interface{}
 	errUnm := json.Unmarshal([]byte(jsonStr), &result)
