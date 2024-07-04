@@ -135,18 +135,19 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 		return &video, nil
 	}
 
-	date, err := dateparse.ParseAny(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
-	if err != nil {
-		return nil, err
-	}
-
-	video, err = b.DB.Queries.CreateVideo(ctx, models.CreateVideoParams{
+	params := models.CreateVideoParams{
 		YtID:        vidYTID,
 		Title:       videoResult.videoPrimaryInfoRenderer.Title.Runs[0].Text,
 		Description: videoResult.videoSecondaryInfoRenderer.AttributedDescription.Content,
-		PublishedAt: pgtype.Timestamptz{Time: date, Valid: true},
 		ChannelID:   channel.ID,
-	})
+	}
+
+	date, err := dateparse.ParseAny(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
+	if err == nil {
+		params.PublishedAt = pgtype.Timestamptz{Time: date}
+	}
+
+	video, err = b.DB.Queries.CreateVideo(ctx, params)
 	if err != nil {
 		return nil, err
 	}

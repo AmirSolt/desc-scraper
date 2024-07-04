@@ -21,7 +21,7 @@ CREATE TABLE videos (
     desc_fts tsvector GENERATED ALWAYS AS (
         to_tsvector('english', description)
     ) STORED,
-    published_at TIMESTAMPTZ NOT NULL,
+    published_at TIMESTAMPTZ,
 
     channel_id INT NOT NULL REFERENCES channels(id)
 );
