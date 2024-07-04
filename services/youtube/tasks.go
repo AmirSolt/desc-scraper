@@ -146,102 +146,240 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 	return &video, nil
 }
 
-func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
+// func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
 
+// 	jsonStr, err := extractTextBetweenMarkers(vidHTML)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	var result map[string]interface{}
+// 	errUnm := json.Unmarshal([]byte(jsonStr), &result)
+// 	if errUnm != nil {
+// 		return nil, errUnm
+// 	}
+
+// 	// =============================================
+// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
+// 	contents := result["contents"].(map[string]interface{})
+// 	twoColumnWatchNextResults := contents["twoColumnWatchNextResults"].(map[string]interface{})
+// 	results := twoColumnWatchNextResults["results"].(map[string]interface{})
+// 	resultContents := results["results"].(map[string]interface{})
+// 	contents2 := resultContents["contents"].([]interface{})
+// 	videoPrimaryInfoRendererMap := contents2[0].(map[string]interface{})["videoPrimaryInfoRenderer"].(map[string]interface{})
+
+// 	// Convert the segment to JSON
+// 	videoPrimaryInfoRendererJSON, errMar := json.Marshal(videoPrimaryInfoRendererMap)
+// 	if errMar != nil {
+// 		return nil, errMar
+// 	}
+
+// 	// Unmarshal the JSON to the struct
+// 	var videoPrimaryInfoRenderer VideoPrimaryInfoRenderer
+// 	errUnm2 := json.Unmarshal(videoPrimaryInfoRendererJSON, &videoPrimaryInfoRenderer)
+// 	if errUnm2 != nil {
+// 		return nil, errUnm2
+// 	}
+// 	// =============================================
+
+// 	// =============================================
+// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
+// 	videoSecondaryInfoRendererMap := contents2[1].(map[string]interface{})["videoSecondaryInfoRenderer"].(map[string]interface{})
+
+// 	// Convert the segment to JSON
+// 	videoSecondaryInfoRendererMapJSON, errMar := json.Marshal(videoSecondaryInfoRendererMap)
+// 	if errMar != nil {
+// 		return nil, errMar
+// 	}
+
+// 	// Unmarshal the JSON to the struct
+// 	var videoSecondaryInfoRenderer VideoSecondaryInfoRenderer
+// 	errUnm3 := json.Unmarshal(videoSecondaryInfoRendererMapJSON, &videoSecondaryInfoRenderer)
+// 	if errUnm3 != nil {
+// 		return nil, errUnm3
+// 	}
+// 	// =============================================
+
+// 	// =============================================
+// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
+// 	secondaryResults := twoColumnWatchNextResults["secondaryResults"].(map[string]interface{})
+// 	secondaryResults2 := secondaryResults["secondaryResults"].(map[string]interface{})
+// 	secondaryResultsResults := secondaryResults2["results"].([]interface{})
+
+// 	var compactVideoRenderers []CompactVideoRenderer
+// 	for _, secondaryResultsResult := range secondaryResultsResults {
+// 		srr := secondaryResultsResult.(map[string]interface{})
+// 		if _, ok := srr["compactVideoRenderer"]; ok {
+// 			compactVideoRendererMap := srr["compactVideoRenderer"].(map[string]interface{})
+// 			// Convert the segment to JSON
+// 			compactVideoRendererMapJson, err := json.Marshal(compactVideoRendererMap)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+
+// 			// Unmarshal the JSON to the struct
+// 			var compactVideoRenderer CompactVideoRenderer
+// 			errUnm3 := json.Unmarshal(compactVideoRendererMapJson, &compactVideoRenderer)
+// 			if errUnm3 != nil {
+// 				return nil, errUnm3
+// 			}
+
+// 			compactVideoRenderers = append(compactVideoRenderers, compactVideoRenderer)
+// 		}
+// 	}
+// 	// =============================================
+
+// 	// "twoColumnWatchNextResults"
+// 	// "results"
+// 	// "results"
+// 	// "contents"[0]"videoPrimaryInfoRenderer"
+
+// 	// "secondaryResults"
+// 	// "results"[x] if "compactVideoRenderer"
+
+// 	return &VideoResult{
+// 		videoPrimaryInfoRenderer:   videoPrimaryInfoRenderer,
+// 		videoSecondaryInfoRenderer: videoSecondaryInfoRenderer,
+// 		compactVideoRenderers:      compactVideoRenderers,
+// 	}, nil
+// }
+
+func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
 	jsonStr, err := extractTextBetweenMarkers(vidHTML)
 	if err != nil {
 		return nil, err
 	}
 
 	var result map[string]interface{}
-	errUnm := json.Unmarshal([]byte(jsonStr), &result)
-	if errUnm != nil {
-		return nil, errUnm
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return nil, err
 	}
 
-	// =============================================
-	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-	contents := result["contents"].(map[string]interface{})
-	twoColumnWatchNextResults := contents["twoColumnWatchNextResults"].(map[string]interface{})
-	results := twoColumnWatchNextResults["results"].(map[string]interface{})
-	resultContents := results["results"].(map[string]interface{})
-	contents2 := resultContents["contents"].([]interface{})
-	videoPrimaryInfoRendererMap := contents2[0].(map[string]interface{})["videoPrimaryInfoRenderer"].(map[string]interface{})
-
-	// Convert the segment to JSON
-	videoPrimaryInfoRendererJSON, errMar := json.Marshal(videoPrimaryInfoRendererMap)
-	if errMar != nil {
-		return nil, errMar
+	// Helper function to safely get a value from a map and assert its type
+	getMap := func(m map[string]interface{}, key string) (map[string]interface{}, error) {
+		if val, ok := m[key]; ok {
+			if casted, ok := val.(map[string]interface{}); ok {
+				return casted, nil
+			}
+		}
+		return nil, fmt.Errorf("key %s does not contain a map[string]interface{}", key)
 	}
 
-	// Unmarshal the JSON to the struct
+	getSlice := func(m map[string]interface{}, key string) ([]interface{}, error) {
+		if val, ok := m[key]; ok {
+			if casted, ok := val.([]interface{}); ok {
+				return casted, nil
+			}
+		}
+		return nil, fmt.Errorf("key %s does not contain a []interface{}", key)
+	}
+
+	getElementMap := func(slice []interface{}, index int) (map[string]interface{}, error) {
+		if index < len(slice) {
+			if casted, ok := slice[index].(map[string]interface{}); ok {
+				return casted, nil
+			}
+		}
+		return nil, fmt.Errorf("index %d does not contain a map[string]interface{}", index)
+	}
+
+	contents, err := getMap(result, "contents")
+	if err != nil {
+		return nil, err
+	}
+
+	twoColumnWatchNextResults, err := getMap(contents, "twoColumnWatchNextResults")
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := getMap(twoColumnWatchNextResults, "results")
+	if err != nil {
+		return nil, err
+	}
+
+	resultContents, err := getMap(results, "results")
+	if err != nil {
+		return nil, err
+	}
+
+	contents2, err := getSlice(resultContents, "contents")
+	if err != nil {
+		return nil, err
+	}
+
+	videoPrimaryInfoRendererElem, err := getElementMap(contents2, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	videoPrimaryInfoRendererMap, err := getMap(videoPrimaryInfoRendererElem, "videoPrimaryInfoRenderer")
+	if err != nil {
+		return nil, err
+	}
+
 	var videoPrimaryInfoRenderer VideoPrimaryInfoRenderer
-	errUnm2 := json.Unmarshal(videoPrimaryInfoRendererJSON, &videoPrimaryInfoRenderer)
-	if errUnm2 != nil {
-		return nil, errUnm2
-	}
-	// =============================================
-
-	// =============================================
-	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-	videoSecondaryInfoRendererMap := contents2[1].(map[string]interface{})["videoSecondaryInfoRenderer"].(map[string]interface{})
-
-	// Convert the segment to JSON
-	videoSecondaryInfoRendererMapJSON, errMar := json.Marshal(videoSecondaryInfoRendererMap)
-	if errMar != nil {
-		return nil, errMar
+	if err := convertMapToStruct(videoPrimaryInfoRendererMap, &videoPrimaryInfoRenderer); err != nil {
+		return nil, err
 	}
 
-	// Unmarshal the JSON to the struct
+	videoSecondaryInfoRendererElem, err := getElementMap(contents2, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	videoSecondaryInfoRendererMap, err := getMap(videoSecondaryInfoRendererElem, "videoSecondaryInfoRenderer")
+	if err != nil {
+		return nil, err
+	}
+
 	var videoSecondaryInfoRenderer VideoSecondaryInfoRenderer
-	errUnm3 := json.Unmarshal(videoSecondaryInfoRendererMapJSON, &videoSecondaryInfoRenderer)
-	if errUnm3 != nil {
-		return nil, errUnm3
+	if err := convertMapToStruct(videoSecondaryInfoRendererMap, &videoSecondaryInfoRenderer); err != nil {
+		return nil, err
 	}
-	// =============================================
 
-	// =============================================
-	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-	secondaryResults := twoColumnWatchNextResults["secondaryResults"].(map[string]interface{})
-	secondaryResults2 := secondaryResults["secondaryResults"].(map[string]interface{})
-	secondaryResultsResults := secondaryResults2["results"].([]interface{})
+	secondaryResults, err := getMap(twoColumnWatchNextResults, "secondaryResults")
+	if err != nil {
+		return nil, err
+	}
+
+	secondaryResults2, err := getMap(secondaryResults, "secondaryResults")
+	if err != nil {
+		return nil, err
+	}
+
+	secondaryResultsResults, err := getSlice(secondaryResults2, "results")
+	if err != nil {
+		return nil, err
+	}
 
 	var compactVideoRenderers []CompactVideoRenderer
-	for _, secondaryResultsResult := range secondaryResultsResults {
-		srr := secondaryResultsResult.(map[string]interface{})
-		if _, ok := srr["compactVideoRenderer"]; ok {
-			compactVideoRendererMap := srr["compactVideoRenderer"].(map[string]interface{})
-			// Convert the segment to JSON
-			compactVideoRendererMapJson, err := json.Marshal(compactVideoRendererMap)
-			if err != nil {
-				return nil, err
+	for _, secResult := range secondaryResultsResults {
+		if resultMap, ok := secResult.(map[string]interface{}); ok {
+			if cvRendererMap, ok := resultMap["compactVideoRenderer"].(map[string]interface{}); ok {
+				var compactVideoRenderer CompactVideoRenderer
+				if err := convertMapToStruct(cvRendererMap, &compactVideoRenderer); err != nil {
+					return nil, err
+				}
+				compactVideoRenderers = append(compactVideoRenderers, compactVideoRenderer)
 			}
-
-			// Unmarshal the JSON to the struct
-			var compactVideoRenderer CompactVideoRenderer
-			errUnm3 := json.Unmarshal(compactVideoRendererMapJson, &compactVideoRenderer)
-			if errUnm3 != nil {
-				return nil, errUnm3
-			}
-
-			compactVideoRenderers = append(compactVideoRenderers, compactVideoRenderer)
 		}
 	}
-	// =============================================
-
-	// "twoColumnWatchNextResults"
-	// "results"
-	// "results"
-	// "contents"[0]"videoPrimaryInfoRenderer"
-
-	// "secondaryResults"
-	// "results"[x] if "compactVideoRenderer"
 
 	return &VideoResult{
 		videoPrimaryInfoRenderer:   videoPrimaryInfoRenderer,
 		videoSecondaryInfoRenderer: videoSecondaryInfoRenderer,
 		compactVideoRenderers:      compactVideoRenderers,
 	}, nil
+}
+
+// Helper function to convert a map to a struct using JSON marshalling/unmarshalling
+func convertMapToStruct(m map[string]interface{}, v interface{}) error {
+	bytes, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, v)
 }
 
 func extractTextBetweenMarkers(text string) (string, error) {
