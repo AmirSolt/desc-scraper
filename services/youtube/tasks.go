@@ -32,10 +32,16 @@ func RunTasks(b *base.Base) error {
 
 func VideoScrapeTask(b *base.Base) error {
 	ctx := context.Background()
-	fmt.Println(b.MemQ.Size())
+
+	size, err := b.MemQ.Size()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 
 	count := 0
-	for count < 5 {
+	for true {
 		vidID, err := b.MemQ.Dequeue()
 		if err != nil {
 			log.Fatal(err)
@@ -83,9 +89,15 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 
-		fmt.Println(b.MemQ.Size())
+		size, err := b.MemQ.Size()
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 		count++
 		time.Sleep(1 * time.Second)
+		fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
 	fmt.Println(b.MemQ.Size())
@@ -124,7 +136,6 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 		return &video, nil
 	}
 
-	println(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
 	date, err := dateparse.ParseAny(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
 	if err != nil {
 		return nil, err
