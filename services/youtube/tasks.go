@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"time"
@@ -32,6 +33,8 @@ func RunTasks(b *base.Base) error {
 func VideoScrapeTask(b *base.Base) error {
 	ctx := context.Background()
 
+	time.Sleep(time.Duration(getRandom(1, 12)))
+
 	size, err := b.MemQ.Size()
 	if err != nil {
 		log.Fatal(err)
@@ -39,7 +42,6 @@ func VideoScrapeTask(b *base.Base) error {
 	}
 	fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 
-	count := 0
 	for true {
 		vidID, err := b.MemQ.Dequeue()
 		if err != nil {
@@ -67,7 +69,7 @@ func VideoScrapeTask(b *base.Base) error {
 			log.Fatal(err)
 			return err
 		}
-		fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
+		// fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
 		if queueSize < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
@@ -87,9 +89,8 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 
-		count++
 		time.Sleep(1 * time.Second)
-		fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
+		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
 	fmt.Println(b.MemQ.Size())
@@ -145,104 +146,6 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 	}
 	return &video, nil
 }
-
-// func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
-
-// 	jsonStr, err := extractTextBetweenMarkers(vidHTML)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var result map[string]interface{}
-// 	errUnm := json.Unmarshal([]byte(jsonStr), &result)
-// 	if errUnm != nil {
-// 		return nil, errUnm
-// 	}
-
-// 	// =============================================
-// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-// 	contents := result["contents"].(map[string]interface{})
-// 	twoColumnWatchNextResults := contents["twoColumnWatchNextResults"].(map[string]interface{})
-// 	results := twoColumnWatchNextResults["results"].(map[string]interface{})
-// 	resultContents := results["results"].(map[string]interface{})
-// 	contents2 := resultContents["contents"].([]interface{})
-// 	videoPrimaryInfoRendererMap := contents2[0].(map[string]interface{})["videoPrimaryInfoRenderer"].(map[string]interface{})
-
-// 	// Convert the segment to JSON
-// 	videoPrimaryInfoRendererJSON, errMar := json.Marshal(videoPrimaryInfoRendererMap)
-// 	if errMar != nil {
-// 		return nil, errMar
-// 	}
-
-// 	// Unmarshal the JSON to the struct
-// 	var videoPrimaryInfoRenderer VideoPrimaryInfoRenderer
-// 	errUnm2 := json.Unmarshal(videoPrimaryInfoRendererJSON, &videoPrimaryInfoRenderer)
-// 	if errUnm2 != nil {
-// 		return nil, errUnm2
-// 	}
-// 	// =============================================
-
-// 	// =============================================
-// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-// 	videoSecondaryInfoRendererMap := contents2[1].(map[string]interface{})["videoSecondaryInfoRenderer"].(map[string]interface{})
-
-// 	// Convert the segment to JSON
-// 	videoSecondaryInfoRendererMapJSON, errMar := json.Marshal(videoSecondaryInfoRendererMap)
-// 	if errMar != nil {
-// 		return nil, errMar
-// 	}
-
-// 	// Unmarshal the JSON to the struct
-// 	var videoSecondaryInfoRenderer VideoSecondaryInfoRenderer
-// 	errUnm3 := json.Unmarshal(videoSecondaryInfoRendererMapJSON, &videoSecondaryInfoRenderer)
-// 	if errUnm3 != nil {
-// 		return nil, errUnm3
-// 	}
-// 	// =============================================
-
-// 	// =============================================
-// 	// Navigate to the videoPrimaryInfoRenderer part of the JSON
-// 	secondaryResults := twoColumnWatchNextResults["secondaryResults"].(map[string]interface{})
-// 	secondaryResults2 := secondaryResults["secondaryResults"].(map[string]interface{})
-// 	secondaryResultsResults := secondaryResults2["results"].([]interface{})
-
-// 	var compactVideoRenderers []CompactVideoRenderer
-// 	for _, secondaryResultsResult := range secondaryResultsResults {
-// 		srr := secondaryResultsResult.(map[string]interface{})
-// 		if _, ok := srr["compactVideoRenderer"]; ok {
-// 			compactVideoRendererMap := srr["compactVideoRenderer"].(map[string]interface{})
-// 			// Convert the segment to JSON
-// 			compactVideoRendererMapJson, err := json.Marshal(compactVideoRendererMap)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-
-// 			// Unmarshal the JSON to the struct
-// 			var compactVideoRenderer CompactVideoRenderer
-// 			errUnm3 := json.Unmarshal(compactVideoRendererMapJson, &compactVideoRenderer)
-// 			if errUnm3 != nil {
-// 				return nil, errUnm3
-// 			}
-
-// 			compactVideoRenderers = append(compactVideoRenderers, compactVideoRenderer)
-// 		}
-// 	}
-// 	// =============================================
-
-// 	// "twoColumnWatchNextResults"
-// 	// "results"
-// 	// "results"
-// 	// "contents"[0]"videoPrimaryInfoRenderer"
-
-// 	// "secondaryResults"
-// 	// "results"[x] if "compactVideoRenderer"
-
-// 	return &VideoResult{
-// 		videoPrimaryInfoRenderer:   videoPrimaryInfoRenderer,
-// 		videoSecondaryInfoRenderer: videoSecondaryInfoRenderer,
-// 		compactVideoRenderers:      compactVideoRenderers,
-// 	}, nil
-// }
 
 func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {
 	jsonStr, err := extractTextBetweenMarkers(vidHTML)
@@ -434,4 +337,8 @@ func getYtRequest(url string) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+func getRandom(min, max int) int {
+	return rand.Intn(max-min) + min
 }
