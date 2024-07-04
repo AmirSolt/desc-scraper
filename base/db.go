@@ -16,7 +16,7 @@ type DB struct {
 }
 
 func (base *Base) loadDB() {
-	pool, dbErr := pgxpool.New(context.Background(), base.DATABASE_URL)
+	pool, dbErr := pgxpool.New(context.Background(), base.Env.DATABASE_URL)
 	if dbErr != nil {
 		log.Fatalln("Error db:", dbErr)
 	}
@@ -31,5 +31,5 @@ func (base *Base) loadDB() {
 }
 
 func (base *Base) killDB() {
-	base.Pool.Close()
+	base.DB.Pool.Close()
 }

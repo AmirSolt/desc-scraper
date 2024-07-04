@@ -1,14 +1,12 @@
 package base
 
 type Config struct {
-	ScanEventCountLimit int
-	MaxAreasByUser      int
+	MaxQueueSize int
 }
 
 func (b *Base) loadConfig() {
 	config := Config{
-		ScanEventCountLimit: 100,
-		MaxAreasByUser:      4,
+		MaxQueueSize: 10_000_000,
 	}
 
 	b.Config = &config

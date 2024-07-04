@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"desc/base"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,23 +9,57 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 )
 
-func RunTasks() error {
-	vidHTML, err := requestVideoHTML("KkCXLABwHP0")
-	if err != nil {
-		log.Fatal(err)
-		return err
+func RunTasks(b *base.Base) error {
+	return VideoScrapeTask(b)
+}
+
+func VideoScrapeTask(b *base.Base) error {
+
+	for true {
+		vidID, err := b.MemQ.Dequeue()
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		if vidID == "" {
+			err := fmt.Errorf("video_queue is empty")
+			log.Fatal(err)
+			return err
+		}
+
+		vidHTML, err := requestVideoHTML(vidID)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+
+		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
+		if err2 != nil {
+			log.Fatal(err2)
+			return err2
+		}
+
+		queueSize, err := b.MemQ.Size()
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		if queueSize < b.Config.MaxQueueSize {
+			for _, compactVid := range videoResult.compactVideoRenderers {
+				b.MemQ.Enqueue(compactVid.VideoID)
+			}
+		}
+
+		// add to DB
+		// fmt.Println(videoResult)
+
+		time.Sleep(1 * time.Second)
+
 	}
 
-	videoResult, err2 := convertVideoHTMLToObject(vidHTML)
-
-	if err2 != nil {
-		log.Fatal(err2)
-		return err2
-	}
-
-	fmt.Println(videoResult)
 	return nil
 }
 
