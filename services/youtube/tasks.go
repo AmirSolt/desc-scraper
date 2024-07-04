@@ -54,14 +54,12 @@ func VideoScrapeTask(b *base.Base) error {
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			continue
 		}
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
 		if err2 != nil {
-			log.Fatal(err2)
-			return err2
+			continue
 		}
 
 		queueSize, err := b.MemQ.Size()
@@ -69,6 +67,7 @@ func VideoScrapeTask(b *base.Base) error {
 			log.Fatal(err)
 			return err
 		}
+		fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
 		if queueSize < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
@@ -88,19 +87,12 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 
-		size, err := b.MemQ.Size()
-		if err != nil {
-			log.Fatal(err)
-			return err
-		}
-		fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 		count++
 		time.Sleep(1 * time.Second)
 		fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
 	fmt.Println(b.MemQ.Size())
-
 	return nil
 }
 
