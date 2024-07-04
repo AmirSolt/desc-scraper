@@ -9,8 +9,8 @@ import (
 )
 
 type Env struct {
-	DATABASE_URL   string `validate:"url"`
-	MEMCACHED_URL  string `validate:"url"`
+	DATABASE_URL   string `validate:"required"`
+	MEMCACHED_URL  string `validate:"required"`
 	SECRET_API_KEY string `validate:"required"`
 }
 
