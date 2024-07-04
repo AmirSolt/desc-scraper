@@ -1,8 +1,11 @@
 package youtube
 
 import (
+	"context"
 	"desc/base"
+	"desc/models"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,15 +13,29 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+/*
+Future Fixes:
+
+1. convertVideoHTMLToObject is a giant poop
+
+
+*/
 
 func RunTasks(b *base.Base) error {
 	return VideoScrapeTask(b)
 }
 
 func VideoScrapeTask(b *base.Base) error {
+	ctx := context.Background()
+	fmt.Println(b.MemQ.Size())
 
-	for true {
+	count := 0
+	for count < 5 {
 		vidID, err := b.MemQ.Dequeue()
 		if err != nil {
 			log.Fatal(err)
@@ -48,19 +65,82 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 		if queueSize < b.Config.MaxQueueSize {
+			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
-				b.MemQ.Enqueue(compactVid.VideoID)
+				vidIDs = append(vidIDs, compactVid.VideoID)
 			}
+			b.MemQ.EnqueueAll(vidIDs)
 		}
 
-		// add to DB
-		// fmt.Println(videoResult)
+		channel, err := findSertChannel(b, ctx, videoResult)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		_, err = findSertVideo(b, ctx, channel, videoResult, vidID)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
 
+		fmt.Println(b.MemQ.Size())
+		count++
 		time.Sleep(1 * time.Second)
-
 	}
 
+	fmt.Println(b.MemQ.Size())
+
 	return nil
+}
+
+func findSertChannel(b *base.Base, ctx context.Context, videoResult *VideoResult) (*models.Channel, error) {
+	ytID := videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Title.Runs[0].NavigationEndpoint.BrowseEndpoint.BrowseId
+	channel, err := b.DB.Queries.GetChannelByYTID(ctx, ytID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	if err == nil {
+		return &channel, nil
+	}
+
+	thumbnails := videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Thumbnail.Thumbnails
+	channel, err = b.DB.Queries.CreateChannel(ctx, models.CreateChannelParams{
+		YtID:         ytID,
+		ThumbnailUrl: thumbnails[len(thumbnails)-1].URL,
+		Handle:       videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Title.Runs[0].NavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl,
+		Title:        videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Title.Runs[0].Text,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &channel, nil
+}
+func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, videoResult *VideoResult, vidYTID string) (*models.Video, error) {
+	video, err := b.DB.Queries.GetVideoByYTID(ctx, vidYTID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	if err == nil {
+		return &video, nil
+	}
+
+	println(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
+	date, err := time.Parse("2 Jan 2006", videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
+	if err != nil {
+		return nil, err
+	}
+
+	video, err = b.DB.Queries.CreateVideo(ctx, models.CreateVideoParams{
+		YtID:        vidYTID,
+		Title:       videoResult.videoPrimaryInfoRenderer.Title.Runs[0].Text,
+		Description: videoResult.videoSecondaryInfoRenderer.AttributedDescription.Content,
+		PublishedAt: pgtype.Timestamptz{Time: date, Valid: true},
+		ChannelID:   channel.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &video, nil
 }
 
 func convertVideoHTMLToObject(vidHTML string) (*VideoResult, error) {

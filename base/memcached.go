@@ -25,7 +25,32 @@ func (mq *MemcachedQueue) Enqueue(item string) error {
 	if err != nil && err != memcache.ErrCacheMiss {
 		return err
 	}
-	queue = append(queue, item)
+	itemMap := make(map[string]bool)
+	for _, qItem := range queue {
+		itemMap[qItem] = true
+	}
+	if !itemMap[item] {
+		queue = append(queue, item)
+		return mq.setQueue(queue)
+	}
+	return nil // Item is already in the queue, no need to add
+}
+
+func (mq *MemcachedQueue) EnqueueAll(items []string) error {
+	queue, err := mq.getQueue()
+	if err != nil && err != memcache.ErrCacheMiss {
+		return err
+	}
+	itemMap := make(map[string]bool)
+	for _, qItem := range queue {
+		itemMap[qItem] = true
+	}
+	for _, item := range items {
+		if !itemMap[item] {
+			queue = append(queue, item)
+			itemMap[item] = true
+		}
+	}
 	return mq.setQueue(queue)
 }
 

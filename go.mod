@@ -3,6 +3,7 @@ module desc
 go 1.21.6
 
 require (
+	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/jackc/pgx/v5 v5.5.5
@@ -11,7 +12,6 @@ require (
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

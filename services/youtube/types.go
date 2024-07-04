@@ -10,18 +10,15 @@ type CompactVideoRenderer struct {
 	VideoID string `json:"videoId"`
 }
 
-type VideoSecondaryInfoRenderer struct {
-	Title                 Title     `json:"title"`
-	ViewCount             ViewCount `json:"viewCount"`
-	TrackingParams        string    `json:"trackingParams"`
-	AttributedDescription Content   `json:"attributedDescription"`
+type VideoPrimaryInfoRenderer struct {
+	Title     Title      `json:"title"`
+	ViewCount ViewCount  `json:"viewCount"`
+	DateText  SimpleText `json:"dateText"`
 }
 
-type VideoPrimaryInfoRenderer struct {
-	Title          Title      `json:"title"`
-	ViewCount      ViewCount  `json:"viewCount"`
-	TrackingParams string     `json:"trackingParams"`
-	DateText       SimpleText `json:"dateText"`
+type VideoSecondaryInfoRenderer struct {
+	Owner                 Owner   `json:"owner"`
+	AttributedDescription Content `json:"attributedDescription"`
 }
 
 type Title struct {

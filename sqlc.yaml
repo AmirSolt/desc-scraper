@@ -14,4 +14,7 @@ sql:
             output_models_file_name: models_sqlc.go
             output_querier_file_name: querier_sqlc.go
             output_copyfrom_file_name: copyfrom_sqlc.go
+            overrides:
+              - column: "videos.desc_fts"
+                go_type: "string"
         

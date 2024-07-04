@@ -11,21 +11,123 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type CreateVideosParams struct {
-	YtID                 string             `json:"yt_id"`
-	Title                string             `json:"title"`
-	Tags                 string             `json:"tags"`
-	DefaultLanguage      string             `json:"default_language"`
-	Description          string             `json:"description"`
-	LiveBroadcastContent bool               `json:"live_broadcast_content"`
-	PublishedAt          pgtype.Timestamptz `json:"published_at"`
-	ChannelID            int32              `json:"channel_id"`
+const createChannel = `-- name: CreateChannel :one
+INSERT INTO channels (
+    yt_id,
+    thumbnail_url,
+    handle,
+    title
+) VALUES ($1,$2,$3,$4) RETURNING id, created_at, yt_id, thumbnail_url, handle, title
+`
+
+type CreateChannelParams struct {
+	YtID         string `json:"yt_id"`
+	ThumbnailUrl string `json:"thumbnail_url"`
+	Handle       string `json:"handle"`
+	Title        string `json:"title"`
+}
+
+func (q *Queries) CreateChannel(ctx context.Context, arg CreateChannelParams) (Channel, error) {
+	row := q.db.QueryRow(ctx, createChannel,
+		arg.YtID,
+		arg.ThumbnailUrl,
+		arg.Handle,
+		arg.Title,
+	)
+	var i Channel
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.YtID,
+		&i.ThumbnailUrl,
+		&i.Handle,
+		&i.Title,
+	)
+	return i, err
+}
+
+const createVideo = `-- name: CreateVideo :one
+INSERT INTO videos (
+    yt_id,
+    title,
+    description,
+    published_at,
+    channel_id
+) VALUES ($1,$2,$3,$4,$5) RETURNING id, created_at, yt_id, title, description, desc_fts, published_at, channel_id
+`
+
+type CreateVideoParams struct {
+	YtID        string             `json:"yt_id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	ChannelID   int32              `json:"channel_id"`
+}
+
+func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (Video, error) {
+	row := q.db.QueryRow(ctx, createVideo,
+		arg.YtID,
+		arg.Title,
+		arg.Description,
+		arg.PublishedAt,
+		arg.ChannelID,
+	)
+	var i Video
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.YtID,
+		&i.Title,
+		&i.Description,
+		&i.DescFts,
+		&i.PublishedAt,
+		&i.ChannelID,
+	)
+	return i, err
+}
+
+const getChannelByYTID = `-- name: GetChannelByYTID :one
+SELECT id, created_at, yt_id, thumbnail_url, handle, title FROM channels WHERE yt_id = $1
+`
+
+func (q *Queries) GetChannelByYTID(ctx context.Context, ytID string) (Channel, error) {
+	row := q.db.QueryRow(ctx, getChannelByYTID, ytID)
+	var i Channel
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.YtID,
+		&i.ThumbnailUrl,
+		&i.Handle,
+		&i.Title,
+	)
+	return i, err
+}
+
+const getVideoByYTID = `-- name: GetVideoByYTID :one
+SELECT id, created_at, yt_id, title, description, desc_fts, published_at, channel_id FROM videos WHERE yt_id = $1
+`
+
+func (q *Queries) GetVideoByYTID(ctx context.Context, ytID string) (Video, error) {
+	row := q.db.QueryRow(ctx, getVideoByYTID, ytID)
+	var i Video
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.YtID,
+		&i.Title,
+		&i.Description,
+		&i.DescFts,
+		&i.PublishedAt,
+		&i.ChannelID,
+	)
+	return i, err
 }
 
 const searchVideoDescs = `-- name: SearchVideoDescs :many
 
 
-SELECT id, created_at, yt_id, title, tags, default_language, description, desc_fts, live_broadcast_content, published_at, channel_id
+SELECT id, created_at, yt_id, title, description, desc_fts, published_at, channel_id
 FROM videos
 WHERE desc_fts @@ to_tsquery($1)
 `
@@ -46,11 +148,8 @@ func (q *Queries) SearchVideoDescs(ctx context.Context, toTsquery string) ([]Vid
 			&i.CreatedAt,
 			&i.YtID,
 			&i.Title,
-			&i.Tags,
-			&i.DefaultLanguage,
 			&i.Description,
 			&i.DescFts,
-			&i.LiveBroadcastContent,
 			&i.PublishedAt,
 			&i.ChannelID,
 		); err != nil {

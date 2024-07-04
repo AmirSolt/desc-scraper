@@ -9,21 +9,21 @@ import (
 )
 
 type Channel struct {
-	ID        int32              `json:"id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	YtID      string             `json:"yt_id"`
+	ID           int32              `json:"id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	YtID         string             `json:"yt_id"`
+	ThumbnailUrl string             `json:"thumbnail_url"`
+	Handle       string             `json:"handle"`
+	Title        string             `json:"title"`
 }
 
 type Video struct {
-	ID                   int32              `json:"id"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	YtID                 string             `json:"yt_id"`
-	Title                string             `json:"title"`
-	Tags                 string             `json:"tags"`
-	DefaultLanguage      string             `json:"default_language"`
-	Description          string             `json:"description"`
-	DescFts              interface{}        `json:"desc_fts"`
-	LiveBroadcastContent bool               `json:"live_broadcast_content"`
-	PublishedAt          pgtype.Timestamptz `json:"published_at"`
-	ChannelID            int32              `json:"channel_id"`
+	ID          int32              `json:"id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	YtID        string             `json:"yt_id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	DescFts     string             `json:"desc_fts"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	ChannelID   int32              `json:"channel_id"`
 }

@@ -6,7 +6,7 @@ type Config struct {
 
 func (b *Base) loadConfig() {
 	config := Config{
-		MaxQueueSize: 10_000_000,
+		MaxQueueSize: 1000,
 	}
 
 	b.Config = &config
