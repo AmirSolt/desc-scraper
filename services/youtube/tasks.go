@@ -49,18 +49,20 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 		if vidID == "" {
-			err := fmt.Errorf("video_queue is empty")
+			err := fmt.Errorf("Error: video_queue is empty")
 			log.Fatal(err)
 			return err
 		}
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
-			continue
+			log.Fatal(err)
+			return err
 		}
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
 		if err2 != nil {
+			fmt.Println(fmt.Sprintf("Error: Convertion Failed: %d", err2.Error()))
 			continue
 		}
 
@@ -69,7 +71,7 @@ func VideoScrapeTask(b *base.Base) error {
 			log.Fatal(err)
 			return err
 		}
-		// fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
+		fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
 		if queueSize < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
