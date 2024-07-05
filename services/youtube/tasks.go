@@ -73,6 +73,9 @@ func VideoScrapeTask(b *base.Base) error {
 		if queueSize < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
+				if compactVid.VideoID == "" {
+					continue
+				}
 				vidIDs = append(vidIDs, compactVid.VideoID)
 			}
 			b.MemQ.EnqueueAll(vidIDs)
@@ -103,7 +106,7 @@ func findSertChannel(b *base.Base, ctx context.Context, videoResult *VideoResult
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
-	if err == nil {
+	if channel.YtID != "" {
 		return &channel, nil
 	}
 
