@@ -62,7 +62,7 @@ func VideoScrapeTask(b *base.Base) error {
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
 		if err2 != nil {
-			fmt.Println(fmt.Sprintf("Error: Convertion Failed: %d", err2.Error()))
+			fmt.Println(fmt.Sprintf("WARNING: Convertion Failed: %d", err2.Error()))
 			continue
 		}
 
@@ -85,13 +85,13 @@ func VideoScrapeTask(b *base.Base) error {
 
 		channel, err := findSertChannel(b, ctx, videoResult)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			fmt.Println(fmt.Sprintf("WARNING: Channel Finsert Failed: %d", err.Error()))
+			continue
 		}
 		_, err = findSertVideo(b, ctx, channel, videoResult, vidID)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			fmt.Println(fmt.Sprintf("WARNING: Video Finsert Failed: %d", err.Error()))
+			continue
 		}
 
 		time.Sleep(1 * time.Second)
