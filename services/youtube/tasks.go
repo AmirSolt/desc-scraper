@@ -56,8 +56,8 @@ func VideoScrapeTask(b *base.Base) error {
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			fmt.Println(fmt.Sprintf("WARNING: Request Failed: %d", err.Error()))
+			continue
 		}
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
@@ -331,8 +331,13 @@ func getYtRequest(url string) (string, error) {
 	defer resp.Body.Close()
 
 	// Check if the HTTP status code is OK
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		time.Sleep(5 * time.Second)
+		return "", fmt.Errorf("delayed status code: %d", resp.StatusCode)
 	}
 
 	// Read the response body
