@@ -75,7 +75,6 @@ func VideoScrapeTask(b *base.Base) error {
 			log.Fatal(err)
 			return err
 		}
-		fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
 		if queueSize < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
@@ -98,12 +97,15 @@ func VideoScrapeTask(b *base.Base) error {
 			continue
 		}
 
+		totalReq++
 		if totalReq%100 == 0 {
 			t2 := time.Now().Unix()
-			reqRate := int64(totalReq) / (t2 - t1)
-			fmt.Println(fmt.Sprintf("Request Rate: %d", reqRate))
+			if t2 > t1 {
+				reqRate := int64(totalReq) / (t2 - t1)
+				fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
+				fmt.Println(fmt.Sprintf("Request Rate (req/s): %d", reqRate))
+			}
 		}
-
 		time.Sleep(50 * time.Millisecond)
 		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
