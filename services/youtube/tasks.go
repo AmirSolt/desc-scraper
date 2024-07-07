@@ -102,11 +102,11 @@ func VideoScrapeTask(b *base.Base) error {
 			elapsed := time.Now().Sub(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("Queue Size: %f", queueSize))
-				fmt.Println(fmt.Sprintf("Request Rate (req/s): %d", reqRate))
+				fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
+				fmt.Println(fmt.Sprintf("Request Rate (req/s): %f", reqRate))
 			}
 		}
-		time.Sleep(10 * time.Millisecond)
+		// time.Sleep(10 * time.Millisecond)
 		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
