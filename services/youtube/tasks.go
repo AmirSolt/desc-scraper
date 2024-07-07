@@ -11,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"regexp"
 	"time"
 
@@ -32,8 +33,6 @@ func RunTasks(b *base.Base) error {
 
 func VideoScrapeTask(b *base.Base) error {
 	ctx := context.Background()
-
-	time.Sleep(time.Duration(getRandom(1, 12)))
 
 	size, err := b.MemQ.Size()
 	if err != nil {
@@ -94,7 +93,7 @@ func VideoScrapeTask(b *base.Base) error {
 			continue
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Millisecond)
 		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
@@ -316,7 +315,7 @@ func requestVideoHTML(vidID string) (string, error) {
 
 func getYtRequest(url string) (string, error) {
 	// Create a new HTTP client
-	client := &http.Client{}
+	client := getSmartProxyClient()
 
 	// Create a new GET request
 	req, err := http.NewRequest("GET", url, nil)
@@ -350,5 +349,21 @@ func getYtRequest(url string) (string, error) {
 }
 
 func getRandom(min, max int) int {
+	return rand.Intn(max-min) + min
+}
+
+func getSmartProxyClient() *http.Client {
+	proxyUrl, err := url.Parse(fmt.Sprintf("http://sp3z4sznsk:h+lkSNLmL5f9gto02c@dc.smartproxy.com:%d", randomNumber(10001, 10100)))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	client := &http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
+	}
+	return client
+}
+
+func randomNumber(min, max int) int {
+	// rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min) + min
 }
