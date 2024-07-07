@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/araddon/dateparse"
@@ -22,26 +23,39 @@ import (
 
 /*
 Future Fixes:
-
 1. convertVideoHTMLToObject is a giant poop
-
 */
 
-func RunTasks(b *base.Base) error {
-	return VideoScrapeTask(b)
+const NumTasks int = 5
+
+func RunTasks(b *base.Base) {
+
+	// b.MemQ.Enqueue("3hw_y9hI_js")
+
+	var wg sync.WaitGroup
+	wg.Add(NumTasks)
+	for i := 0; i < NumTasks; i++ {
+		taskerName := fmt.Sprintf("T%d", i)
+		go func() {
+			defer wg.Done()
+			fmt.Println(fmt.Sprintf("%s: Started Running", taskerName))
+			if err := VideoScrapeTask(b, taskerName); err != nil {
+				fmt.Println(fmt.Sprintf("%s: Error running task:", taskerName), err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
-func VideoScrapeTask(b *base.Base) error {
+func VideoScrapeTask(b *base.Base, taskerName string) error {
 	ctx := context.Background()
-
-	b.MemQ.Enqueue("3hw_y9hI_js")
 
 	size, err := b.MemQ.Size()
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
-	fmt.Println(fmt.Sprintf("Queue Size: %d", size))
+	fmt.Println(fmt.Sprintf("T%s - Queue Size: %d", taskerName, size))
 
 	t1 := time.Now()
 	totalReq := 0
@@ -53,20 +67,20 @@ func VideoScrapeTask(b *base.Base) error {
 			return err
 		}
 		if vidID == "" {
-			err := fmt.Errorf("Error: video_queue is empty")
+			err := fmt.Errorf("T%s - Error: video_queue is empty", taskerName)
 			log.Fatal(err)
 			return err
 		}
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("WARNING: Request Failed: %d", err.Error()))
+			fmt.Println(fmt.Sprintf("T%s - WARNING: Request Failed: %s", taskerName, err.Error()))
 			continue
 		}
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
 		if err2 != nil {
-			fmt.Println(fmt.Sprintf("WARNING: Convertion Failed: %d", err2.Error()))
+			fmt.Println(fmt.Sprintf("T%s - WARNING: Convertion Failed: %s", taskerName, err2.Error()))
 			continue
 		}
 
@@ -88,12 +102,12 @@ func VideoScrapeTask(b *base.Base) error {
 
 		channel, err := findSertChannel(b, ctx, videoResult)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("WARNING: Channel Finsert Failed: %d", err.Error()))
+			fmt.Println(fmt.Sprintf("T%s - WARNING: Channel Finsert Failed: %s", taskerName, err.Error()))
 			continue
 		}
 		_, err = findSertVideo(b, ctx, channel, videoResult, vidID)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("WARNING: Video Finsert Failed: %d", err.Error()))
+			fmt.Println(fmt.Sprintf("T%s - WARNING: Video Finsert Failed: %s", taskerName, err.Error()))
 			continue
 		}
 
@@ -102,8 +116,8 @@ func VideoScrapeTask(b *base.Base) error {
 			elapsed := time.Now().Sub(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
-				fmt.Println(fmt.Sprintf("Request Rate (req/s): %f", reqRate))
+				fmt.Println(fmt.Sprintf("T%s - Queue Size: %d", taskerName, queueSize))
+				fmt.Println(fmt.Sprintf("T%s - Request Rate (req/s): %f", taskerName, reqRate))
 			}
 		}
 		// time.Sleep(10 * time.Millisecond)
