@@ -43,7 +43,7 @@ func VideoScrapeTask(b *base.Base) error {
 	}
 	fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 
-	t1 := time.Now().Unix()
+	t1 := time.Now()
 	totalReq := 0
 
 	for true {
@@ -98,10 +98,10 @@ func VideoScrapeTask(b *base.Base) error {
 		}
 
 		totalReq++
-		if totalReq%100 == 0 {
-			t2 := time.Now().Unix()
-			if t2 > t1 {
-				reqRate := int64(totalReq) / (t2 - t1)
+		if totalReq%10 == 0 {
+			elapsed := time.Now().Sub(t1).Seconds()
+			if elapsed > 0 {
+				reqRate := float64(totalReq) / elapsed
 				fmt.Println(fmt.Sprintf("Queue Size: %d", queueSize))
 				fmt.Println(fmt.Sprintf("Request Rate (req/s): %d", reqRate))
 			}
