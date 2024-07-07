@@ -43,6 +43,9 @@ func VideoScrapeTask(b *base.Base) error {
 	}
 	fmt.Println(fmt.Sprintf("Queue Size: %d", size))
 
+	t1 := time.Now().Unix()
+	totalReq := 0
+
 	for true {
 		vidID, err := b.MemQ.Dequeue()
 		if err != nil {
@@ -93,6 +96,12 @@ func VideoScrapeTask(b *base.Base) error {
 		if err != nil {
 			fmt.Println(fmt.Sprintf("WARNING: Video Finsert Failed: %d", err.Error()))
 			continue
+		}
+
+		if totalReq%100 == 0 {
+			t2 := time.Now().Unix()
+			reqRate := int64(totalReq) / (t2 - t1)
+			fmt.Println(fmt.Sprintf("Request Rate: %d", reqRate))
 		}
 
 		time.Sleep(50 * time.Millisecond)
