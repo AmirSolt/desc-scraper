@@ -26,7 +26,7 @@ Future Fixes:
 1. convertVideoHTMLToObject is a giant poop
 */
 
-const NumTasks int = 5
+const NumTasks int = 24
 
 func RunTasks(b *base.Base) {
 
@@ -55,7 +55,7 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 		log.Fatal(err)
 		return err
 	}
-	fmt.Println(fmt.Sprintf("T%s - Queue Size: %d", taskerName, size))
+	fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, size))
 
 	t1 := time.Now()
 	totalReq := 0
@@ -67,20 +67,20 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 			return err
 		}
 		if vidID == "" {
-			err := fmt.Errorf("T%s - Error: video_queue is empty", taskerName)
+			err := fmt.Errorf("%s - Error: video_queue is empty", taskerName)
 			log.Fatal(err)
 			return err
 		}
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("T%s - WARNING: Request Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
 			continue
 		}
 
 		videoResult, err2 := convertVideoHTMLToObject(vidHTML)
 		if err2 != nil {
-			fmt.Println(fmt.Sprintf("T%s - WARNING: Convertion Failed: %s", taskerName, err2.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Convertion Failed: %s", taskerName, err2.Error()))
 			continue
 		}
 
@@ -102,12 +102,12 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 
 		channel, err := findSertChannel(b, ctx, videoResult)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("T%s - WARNING: Channel Finsert Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Channel Finsert Failed: %s", taskerName, err.Error()))
 			continue
 		}
 		_, err = findSertVideo(b, ctx, channel, videoResult, vidID)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("T%s - WARNING: Video Finsert Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Video Finsert Failed: %s", taskerName, err.Error()))
 			continue
 		}
 
@@ -116,8 +116,8 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 			elapsed := time.Now().Sub(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("T%s - Queue Size: %d", taskerName, queueSize))
-				fmt.Println(fmt.Sprintf("T%s - Request Rate (req/s): %f", taskerName, reqRate))
+				fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, queueSize))
+				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f", taskerName, reqRate))
 			}
 		}
 		// time.Sleep(10 * time.Millisecond)
