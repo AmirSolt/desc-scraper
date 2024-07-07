@@ -34,6 +34,8 @@ func RunTasks(b *base.Base) error {
 func VideoScrapeTask(b *base.Base) error {
 	ctx := context.Background()
 
+	b.MemQ.Enqueue("3hw_y9hI_js")
+
 	size, err := b.MemQ.Size()
 	if err != nil {
 		log.Fatal(err)
