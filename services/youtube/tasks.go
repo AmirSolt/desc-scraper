@@ -95,7 +95,7 @@ func VideoScrapeTask(b *base.Base) error {
 			continue
 		}
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
