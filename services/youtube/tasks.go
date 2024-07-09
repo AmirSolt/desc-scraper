@@ -74,6 +74,10 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 
 		vidHTML, err := requestVideoHTML(vidID)
 		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		if vidHTML == "" {
 			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
 			continue
 		}
@@ -116,8 +120,7 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 			elapsed := time.Now().Sub(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, queueSize))
-				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f", taskerName, reqRate))
+				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f - Queue Size: %d", taskerName, reqRate, queueSize))
 			}
 		}
 		// time.Sleep(10 * time.Millisecond)
@@ -363,7 +366,7 @@ func getYtRequest(url string) (string, error) {
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		time.Sleep(5 * time.Second)
-		return "", fmt.Errorf("delayed status code: %d", resp.StatusCode)
+		return "", nil
 	}
 
 	// Read the response body
