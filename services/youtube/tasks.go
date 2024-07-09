@@ -8,17 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
-	"math/rand"
 	"net/http"
-	"net/url"
 	"regexp"
 	"sync"
 	"time"
 
-	"github.com/araddon/dateparse"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 /*
@@ -26,11 +21,11 @@ Future Fixes:
 1. convertVideoHTMLToObject is a giant poop
 */
 
-const NumTasks int = 24
+const NumTasks int = 1
 
 func RunTasks(b *base.Base) {
 
-	// b.MemQ.Enqueue("3hw_y9hI_js")
+	queue := &Queue{queue: []string{"3hw_y9hI_js"}}
 
 	var wg sync.WaitGroup
 	wg.Add(NumTasks)
@@ -39,7 +34,7 @@ func RunTasks(b *base.Base) {
 		go func() {
 			defer wg.Done()
 			fmt.Println(fmt.Sprintf("%s: Started Running", taskerName))
-			if err := VideoScrapeTask(b, taskerName); err != nil {
+			if err := VideoScrapeTask(b, taskerName, queue); err != nil {
 				fmt.Println(fmt.Sprintf("%s: Error running task:", taskerName), err)
 			}
 		}()
@@ -47,35 +42,33 @@ func RunTasks(b *base.Base) {
 	wg.Wait()
 }
 
-func VideoScrapeTask(b *base.Base, taskerName string) error {
+func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 	ctx := context.Background()
+	proxies := getProxyList()
 
-	size, err := b.MemQ.Size()
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, size))
+	fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, queue.Size()))
 
 	t1 := time.Now()
 	totalReq := 0
 
 	for true {
-		vidID, err := b.MemQ.Dequeue()
-		if err != nil {
-			log.Fatal(err)
-			return err
-		}
-		if vidID == "" {
-			err := fmt.Errorf("%s - Error: video_queue is empty", taskerName)
-			log.Fatal(err)
-			return err
+		vidID, ok := queue.Dequeue()
+		if !ok {
+			// err := fmt.Errorf("%s - Error: video_queue is empty", taskerName)
+			// log.Fatal(err)
+			// return err
+			fmt.Println(fmt.Sprintf("%s - Error: video_queue is empty", taskerName))
+			time.Sleep(10 * time.Second)
+			continue
 		}
 
-		vidHTML, err := requestVideoHTML(vidID)
+		vidHTML, err := requestVideoHTML(vidID, proxies)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			// log.Fatal(err)
+			// return err
+			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
+			queue.Enqueue(vidID)
+			continue
 		}
 		if vidHTML == "" {
 			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
@@ -88,12 +81,7 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 			continue
 		}
 
-		queueSize, err := b.MemQ.Size()
-		if err != nil {
-			log.Fatal(err)
-			return err
-		}
-		if queueSize < b.Config.MaxQueueSize {
+		if queue.Size() < b.Config.MaxQueueSize {
 			var vidIDs []string
 			for _, compactVid := range videoResult.compactVideoRenderers {
 				if compactVid.VideoID == "" {
@@ -101,7 +89,7 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 				}
 				vidIDs = append(vidIDs, compactVid.VideoID)
 			}
-			b.MemQ.EnqueueAll(vidIDs)
+			queue.EnqueueAll(vidIDs)
 		}
 
 		channel, err := findSertChannel(b, ctx, videoResult)
@@ -120,14 +108,11 @@ func VideoScrapeTask(b *base.Base, taskerName string) error {
 			elapsed := time.Now().Sub(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f - Queue Size: %d", taskerName, reqRate, queueSize))
+				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f - Queue Size: %d", taskerName, reqRate, queue.Size()))
 			}
 		}
-		// time.Sleep(10 * time.Millisecond)
-		// fmt.Println(fmt.Sprintf(">>> Loop Count: %d", count))
 	}
 
-	fmt.Println(b.MemQ.Size())
 	return nil
 }
 
@@ -167,11 +152,6 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 		Title:       videoResult.videoPrimaryInfoRenderer.Title.Runs[0].Text,
 		Description: videoResult.videoSecondaryInfoRenderer.AttributedDescription.Content,
 		ChannelID:   channel.ID,
-	}
-
-	date, err := dateparse.ParseAny(videoResult.videoPrimaryInfoRenderer.DateText.SimpleText)
-	if err == nil {
-		params.PublishedAt = pgtype.Timestamptz{Time: date}
 	}
 
 	video, err = b.DB.Queries.CreateVideo(ctx, params)
@@ -339,13 +319,13 @@ func extractTextBetweenMarkers(text string) (string, error) {
 	return matches[1], nil
 }
 
-func requestVideoHTML(vidID string) (string, error) {
-	return getYtRequest(fmt.Sprintf("https://www.youtube.com/watch?v=%s", vidID))
+func requestVideoHTML(vidID string, proxies []string) (string, error) {
+	return getYtRequest(fmt.Sprintf("https://www.youtube.com/watch?v=%s", vidID), proxies)
 }
 
-func getYtRequest(url string) (string, error) {
+func getYtRequest(url string, proxies []string) (string, error) {
 	// Create a new HTTP client
-	client := getSmartProxyClient()
+	client := getRandomProxyClient(proxies)
 
 	// Create a new GET request
 	req, err := http.NewRequest("GET", url, nil)
@@ -376,24 +356,4 @@ func getYtRequest(url string) (string, error) {
 	}
 
 	return string(body), nil
-}
-
-func getRandom(min, max int) int {
-	return rand.Intn(max-min) + min
-}
-
-func getSmartProxyClient() *http.Client {
-	proxyUrl, err := url.Parse(fmt.Sprintf("http://sp3z4sznsk:h+lkSNLmL5f9gto02c@dc.smartproxy.com:%d", randomNumber(10001, 10100)))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	client := &http.Client{
-		Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
-	}
-	return client
-}
-
-func randomNumber(min, max int) int {
-	// rand.Seed(time.Now().UnixNano())
-	return rand.Intn(max-min) + min
 }

@@ -10,7 +10,6 @@ import (
 
 type Env struct {
 	DATABASE_URL   string `validate:"required"`
-	MEMCACHED_URL  string `validate:"required"`
 	SECRET_API_KEY string `validate:"required"`
 }
 
@@ -21,7 +20,6 @@ func (base *Base) loadEnv() {
 	}
 	env := Env{
 		DATABASE_URL:   os.Getenv("DATABASE_URL"),
-		MEMCACHED_URL:  os.Getenv("MEMCACHED_URL"),
 		SECRET_API_KEY: os.Getenv("SECRET_API_KEY"),
 	}
 

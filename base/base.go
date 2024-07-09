@@ -5,7 +5,6 @@ type Base struct {
 	Env     *Env
 	Config  *Config
 	DB      *DB
-	MemQ    *MemcachedQueue
 }
 
 func LoadBase() *Base {
@@ -17,7 +16,6 @@ func LoadBase() *Base {
 	base.loadEnv()
 	base.loadConfig()
 	base.loadDB()
-	base.loadMemcached()
 
 	return &base
 }
