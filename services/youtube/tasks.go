@@ -22,7 +22,7 @@ Future Fixes:
 1. convertVideoHTMLToObject is a giant poop
 */
 
-const NumTasks int = 24
+const NumTasks int = 1
 
 func RunTasks(b *base.Base) {
 
