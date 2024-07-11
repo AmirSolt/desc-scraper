@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sync"
 	"time"
@@ -21,11 +22,11 @@ Future Fixes:
 1. convertVideoHTMLToObject is a giant poop
 */
 
-const NumTasks int = 1
+const NumTasks int = 24
 
 func RunTasks(b *base.Base) {
 
-	queue := &Queue{queue: []string{"3hw_y9hI_js"}}
+	queue := &Queue{queue: []string{"KkCXLABwHP0"}}
 
 	var wg sync.WaitGroup
 	wg.Add(NumTasks)
@@ -44,7 +45,7 @@ func RunTasks(b *base.Base) {
 
 func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 	ctx := context.Background()
-	proxies := getProxyList()
+	proxies := GetProxyList("cmd/proxy/files/filtered_proxies.txt")
 
 	fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, queue.Size()))
 
@@ -62,16 +63,18 @@ func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 			continue
 		}
 
-		vidHTML, err := requestVideoHTML(vidID, proxies)
+		proxy := getRandomProxyURL(proxies)
+		vidHTML, err := RequestVideoHTML(vidID, proxy)
 		if err != nil {
 			// log.Fatal(err)
 			// return err
-			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - Error: Request Failed: %s", taskerName, err.Error()))
 			queue.Enqueue(vidID)
 			continue
 		}
 		if vidHTML == "" {
-			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Request Unsuccessful: %s", taskerName, err.Error()))
+			queue.Enqueue(vidID)
 			continue
 		}
 
@@ -319,29 +322,33 @@ func extractTextBetweenMarkers(text string) (string, error) {
 	return matches[1], nil
 }
 
-func requestVideoHTML(vidID string, proxies []string) (string, error) {
-	return getYtRequest(fmt.Sprintf("https://www.youtube.com/watch?v=%s", vidID), proxies)
+func RequestVideoHTML(vidID string, proxy *url.URL) (string, error) {
+	return getYtRequest(fmt.Sprintf("https://www.youtube.com/watch?v=%s", vidID), proxy)
 }
 
-func getYtRequest(url string, proxies []string) (string, error) {
+func getYtRequest(url string, proxy *url.URL) (string, error) {
 	// Create a new HTTP client
-	client := getRandomProxyClient(proxies)
+
+	client := &http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxy)},
+		Timeout:   10 * time.Second,
+	}
 
 	// Create a new GET request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create GET request: %v", err)
+		return "", fmt.Errorf("proxy: %s - failed to create GET request: %v", proxy.Host, err)
 	}
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send GET request: %v", err)
+		return "", fmt.Errorf("proxy: %s - failed to send GET request: %v", proxy.Host, err)
 	}
 	defer resp.Body.Close()
 
 	// Check if the HTTP status code is OK
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusTooManyRequests {
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("proxy: %s - unexpected status code: %d", proxy.Host, resp.StatusCode)
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
@@ -352,7 +359,7 @@ func getYtRequest(url string, proxies []string) (string, error) {
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
+		return "", fmt.Errorf("proxy: %s - failed to read response body: %v", proxy.Host, err)
 	}
 
 	return string(body), nil
