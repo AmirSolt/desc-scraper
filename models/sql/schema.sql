@@ -1,5 +1,7 @@
 -- Amirali Soltani
 
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TABLE channels (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,3 +24,5 @@ CREATE TABLE videos (
 );
 
 CREATE UNIQUE INDEX yt_vid_idx ON videos ("yt_id");
+
+CREATE INDEX videos_description_trgm_idx ON videos USING GIN (description gin_trgm_ops);
