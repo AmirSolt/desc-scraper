@@ -3,7 +3,6 @@ package youtube
 import (
 	"io"
 	"log"
-	"math/rand"
 	"net/url"
 	"os"
 	"strings"
@@ -46,8 +45,7 @@ func GetProxyList(path string) []string {
 	return strings.Split(string(b), "\n")
 }
 
-func getRandomProxyURL(proxies []string) *url.URL {
-	proxy := proxies[rand.Intn(len(proxies))]
+func getProxyURL(proxy string) *url.URL {
 	proxyUrl, err := url.Parse(proxy)
 	if err != nil {
 		log.Fatalln(err)

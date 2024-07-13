@@ -22,15 +22,15 @@ Future Fixes:
 1. convertVideoHTMLToObject is a giant poop
 */
 
-const NumTasks int = 1
+var proxyIndex int = 0
 
 func RunTasks(b *base.Base) {
 
 	queue := &Queue{queue: []string{"KkCXLABwHP0"}}
 
 	var wg sync.WaitGroup
-	wg.Add(NumTasks)
-	for i := 0; i < NumTasks; i++ {
+	wg.Add(b.Env.NUMBER_OF_INSTANCES)
+	for i := 0; i < b.Env.NUMBER_OF_INSTANCES; i++ {
 		taskerName := fmt.Sprintf("T%d", i)
 		go func() {
 			defer wg.Done()
@@ -58,17 +58,18 @@ func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 			// err := fmt.Errorf("%s - Error: video_queue is empty", taskerName)
 			// log.Fatal(err)
 			// return err
-			fmt.Println(fmt.Sprintf("%s - Error: video_queue is empty", taskerName))
+			fmt.Println(fmt.Sprintf("%s - WARNING: video_queue is empty", taskerName))
 			time.Sleep(10 * time.Second)
 			continue
 		}
 
-		proxy := getRandomProxyURL(proxies)
+		proxy := getProxyURL(proxies[proxyIndex])
+		proxyIndex = (proxyIndex + 1) % len(proxies)
 		vidHTML, err := RequestVideoHTML(vidID, proxy)
 		if err != nil {
 			// log.Fatal(err)
 			// return err
-			fmt.Println(fmt.Sprintf("%s - Error: Request Failed: %s", taskerName, err.Error()))
+			fmt.Println(fmt.Sprintf("%s - WARNING: Request Failed: %s", taskerName, err.Error()))
 			queue.Enqueue(vidID)
 			continue
 		}
@@ -331,7 +332,7 @@ func getYtRequest(url string, proxy *url.URL) (string, error) {
 
 	client := &http.Client{
 		Transport: &http.Transport{Proxy: http.ProxyURL(proxy)},
-		Timeout:   10 * time.Second,
+		// Timeout:   120 * time.Second,
 	}
 
 	// Create a new GET request

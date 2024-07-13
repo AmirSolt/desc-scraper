@@ -14,7 +14,9 @@ func main() {
 	rawProxies := youtube.GetProxyList("cmd/proxy/files/raw_proxies.txt")
 
 	filteredProxies := []string{}
-	for _, proxy := range rawProxies {
+	for i, proxy := range rawProxies {
+		fmt.Println(fmt.Sprintf("========== Next (%d) ============", i))
+
 		proxy = strings.ReplaceAll(proxy, "\r", "")
 		proxy := fmt.Sprintf("http://%s", proxy)
 		proxyUrl, err := url.Parse(proxy)
@@ -24,7 +26,7 @@ func main() {
 		content, err := youtube.RequestVideoHTML("KkCXLABwHP0", proxyUrl)
 
 		if err != nil {
-			fmt.Println(fmt.Sprintf("FAIL: %s", proxy))
+			fmt.Println(fmt.Sprintf("FAIL: %s - ERROR: %s", proxy, err.Error()))
 			continue
 		}
 		if content == "" {
