@@ -340,6 +340,8 @@ func getYtRequest(url string, proxy *url.URL) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("proxy: %s - failed to create GET request: %v", proxy.Host, err)
 	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
