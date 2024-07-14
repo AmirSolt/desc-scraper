@@ -12,7 +12,6 @@ import (
 type Env struct {
 	DATABASE_URL        string `validate:"required"`
 	NUMBER_OF_INSTANCES int    `validate:"required"`
-	SECRET_API_KEY      string `validate:"required"`
 }
 
 func (base *Base) loadEnv() {
@@ -29,7 +28,6 @@ func (base *Base) loadEnv() {
 	env := Env{
 		DATABASE_URL:        os.Getenv("DATABASE_URL"),
 		NUMBER_OF_INSTANCES: numOfInstances,
-		SECRET_API_KEY:      os.Getenv("SECRET_API_KEY"),
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
