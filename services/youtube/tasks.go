@@ -23,6 +23,8 @@ Future Fixes:
 */
 
 var proxyIndex int = 0
+var totalReq int = 0
+var t1 time.Time = time.Now()
 
 func RunTasks(b *base.Base) {
 
@@ -48,9 +50,6 @@ func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 	proxies := GetProxyList("cmd/proxy/files/filtered_proxies.txt")
 
 	fmt.Println(fmt.Sprintf("%s - Queue Size: %d", taskerName, queue.Size()))
-
-	t1 := time.Now()
-	totalReq := 0
 
 	for true {
 		vidID, ok := queue.Dequeue()
@@ -108,11 +107,11 @@ func VideoScrapeTask(b *base.Base, taskerName string, queue *Queue) error {
 		}
 
 		totalReq++
-		if totalReq%10 == 0 {
-			elapsed := time.Now().Sub(t1).Seconds()
+		if totalReq%100 == 0 {
+			elapsed := time.Since(t1).Seconds()
 			if elapsed > 0 {
 				reqRate := float64(totalReq) / elapsed
-				fmt.Println(fmt.Sprintf("%s - Request Rate (req/s): %f - Queue Size: %d", taskerName, reqRate, queue.Size()))
+				fmt.Println(fmt.Sprintf("Request Rate (req/s): %f - Queue Size: %d", reqRate, queue.Size()))
 			}
 		}
 	}
@@ -344,6 +343,7 @@ func getYtRequest(url string, proxy *url.URL) (string, error) {
 
 	// Send the request
 	resp, err := client.Do(req)
+
 	if err != nil {
 		return "", fmt.Errorf("proxy: %s - failed to send GET request: %v", proxy.Host, err)
 	}
