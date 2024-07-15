@@ -130,6 +130,9 @@ func findSertChannel(b *base.Base, ctx context.Context, videoResult *VideoResult
 	}
 
 	thumbnails := videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Thumbnail.Thumbnails
+	if len(videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Title.Runs) <= 0 {
+		return nil, fmt.Errorf("videoResult.videoSecondaryInfoRenderer.Owner.VideoOwnerRenderer.Title.Runs is empty")
+	}
 	channel, err = b.DB.Queries.CreateChannel(ctx, models.CreateChannelParams{
 		YtID:         ytID,
 		ThumbnailUrl: thumbnails[len(thumbnails)-1].URL,
@@ -148,6 +151,10 @@ func findSertVideo(b *base.Base, ctx context.Context, channel *models.Channel, v
 	}
 	if err == nil {
 		return &video, nil
+	}
+
+	if len(videoResult.videoPrimaryInfoRenderer.Title.Runs) <= 0 {
+		return nil, fmt.Errorf("videoResult.videoPrimaryInfoRenderer.Title.Runs is empty")
 	}
 
 	params := models.CreateVideoParams{
