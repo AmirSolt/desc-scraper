@@ -10,7 +10,6 @@ CREATE TABLE channels (
     handle TEXT NOT NULL,
     title TEXT NOT NULL
 );
-CREATE UNIQUE INDEX yt_ch_idx ON channels ("yt_id");
 
 
 CREATE TABLE videos (
@@ -23,6 +22,5 @@ CREATE TABLE videos (
     channel_id INT NOT NULL REFERENCES channels(id)
 );
 
-CREATE UNIQUE INDEX yt_vid_idx ON videos ("yt_id");
 
 CREATE INDEX videos_description_trgm_idx ON videos USING GIN (description gin_trgm_ops);
